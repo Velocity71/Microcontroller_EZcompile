@@ -1,1 +1,3 @@
 # Microcontroller_EZcompile
+
+This repository is meant to be a collection of everything I know on compiling microcontrollers, for use by anyone. I hope for this to eventually be a comprehensive guide to microcontroller programming. This library will hopefully hold information on how to compile code (Makefiles, required compiler flags, information on each flag, etc.) for different microcontrollers, and a guide to microcontroller programming aimed at those with some experience in programming (specifically the Arduino IDE), and would like to learn more about embedded systems. I want this to become a resource for everyone to use and learn from, and build off of. For now it is simply my files for compiling code for arduinos. I am starting with the Arduino Uno R4 WiFi.
