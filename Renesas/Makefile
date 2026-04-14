@@ -1,145 +1,142 @@
-# Arduino Core
+# General Microcontroller Makefile
 
-PORT=/dev/ttyACM0
-
-TUSB_PATH = /home/parkervannah/Documents/Microcontroller_EZcompile/.libs/Adafruit_TinyUSB_Arduino
-RENESAS_CORE_PATH = /home/parkervannah/Documents/Microcontroller_EZcompile/.cores/ArduinoCore-renesas
-RENESAS_CORE_ARDUINO_PATH = $(RENESAS_CORE_PATH)/cores/arduino
-RENESAS_LIB_PATH = $(RENESAS_CORE_PATH)/libraries
-VARIANT_PATH = $(RENESAS_CORE_PATH)/variants/UNOWIFIR4
-
-# Toolchain
-CROSS_PATH = /usr/bin/
-CROSS_PREFIX = $(CROSS_PATH)arm-none-eabi-
-CXX = $(CROSS_PREFIX)g++
-OBJCOPY = $(CROSS_PREFIX)objcopy
-SIZE = $(CROSS_PREFIX)size
-BOSSAC_PATH = /bin/
-BOSSAC = $(BOSSAC_PATH)bossac
-
-MCU = cortex-m4
-FPU = fpv4-sp-d16
-FLOAT_ABI = hard
-
-EX_CXXFLAGS := $(shell tr '\n' ' ' <  $(VARIANT_PATH)/cxxflags.txt) -DF_CPU=48000000
-
-EX_INCLUDES := $(patsubst -iwithprefixbefore/%,-I$(RENESAS_CORE_PATH)/%,$(file < $(VARIANT_PATH)/includes.txt))
-
-EX_LDFLAGS = \
-	--specs=nano.specs \
-	-lstdc++ \
-	-lsupc++ \
-	-lm \
-	-lc \
-	-lgcc \
-	-lnosys \
-	-L$(VARIANT_PATH) \
-	-L$(VARIANT_PATH)/libs \
-	-lfsp \
-	-T$(VARIANT_PATH)/fsp.ld
-
-# --- FLAGS --- {{{
-
-WFLAGS = -w -Wall -Wextra
-OFLAGS = -Os
-
-BASE_CXXFLAGS = \
-	$(WFLAGS) \
-	$(OFLAGS) \
-	-g3 \
-	-fno-use-cxa-atexit \
-	-fno-rtti \
-	-fno-exceptions \
-	-MMD \
-	-std=gnu++17 \
-	-mcpu=$(MCU) \
-	-mfloat-abi=$(FLOAT_ABI) \
-	-mfpu=$(FPU) \
-	-fsigned-char \
-	-ffunction-sections \
-	-fdata-sections \
-	-fmessage-length=0 \
-	-fno-builtin \
-	-mthumb
-
-BASE_LDFLAGS = \
-    -Wl,--gc-sections \
-    --specs=nosys.specs \
-    -mcpu=$(MCU) \
-    -mfloat-abi=$(FLOAT_ABI) \
-    -mfpu=$(FPU)
-# }}}
-
-CXXFLAGS = $(BASE_CXXFLAGS) $(EX_CXXFLAGS)
-LDFLAGS = $(BASE_LDFLAGS) $(EX_LDFLAGS)
-INCLUDES = $(EX_INCLUDES) -I$(RENESAS_LIB_PATH)/Arduino_LED_Matrix/src -I$(RENESAS_CORE_ARDUINO_PATH)/api -I$(RENESAS_CORE_ARDUINO_PATH) -I$(VARIANT_PATH) -I$(TUSB_PATH)/src
+# --- EDIT THESE SETTINGS --- {{{
 
 TARGET = firmware
-
 SRC_DIR = src
 BUILD_DIR = build
 BIN_DIR = bin
 
-APP_SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+PORT :=
+TOOLCHAIN_PATH := /opt/homebrew/Cellar/arm-none-eabi-gcc/15.2.0/bin/
+TOOLCHAIN_PREFIX := arm-none-eabi-
+BOSSAC_PATH := /opt/homebrew/Cellar/bossa/1.9.1/bin/
+CORE := ArduinoCore-renesas
+VARIANT := UNOWIFIR4
 
-CORE_CPP := $(shell find $(RENESAS_CORE_ARDUINO_PATH) -name "*.cpp")
+ARDUINO_PATH := /opt/Arduino/
+CORE_PATH := $(ARDUINO_PATH)configs/$(CORE)/
+VARIANT_PATH := $(CORE_PATH)variants/$(VARIANT)/
 
-VARIANT_CPP := $(shell find $(VARIANT_PATH) -name "*.cpp")
+# Toolchain C compiler, C++ compiler, archiver, assembler, object file copier,
+# and size reader
+CC := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)gcc
+CXX := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)g++
+AR := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)ar
+AS := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)g++
+OBJCOPY := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)objcopy
+SIZE := $(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)size
 
-FSP_C := $(shell find $(VARIANT_PATH)/../ra_gen -name "*.c")
+# }}}
 
-FSP_EXTRA_C := $(shell find $(VARIANT_PATH)/../includes/ra/fsp -name "*.c")
+# --- INCLUDED FLAGS, SOURCEFILES, AND OBJECTFILES --- {{{
 
-SRCS := $(APP_SRCS) $(CORE_CPP) $(VARIANT_CPP) $(FSP_C) $(FSP_EXTRA_C)
-OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(filter %.cpp,$(SRCS))) \
-	$(patsubst %.c,$(BUILD_DIR)/%.o,$(filter %.c,$(SRCS)))
+# --- FLAGS --- {{{
+CFLAGS := \
+	$(CORE_PATH)/cflags.txt \
+	$(VARIANT_PATH)/cflags.txt
 
-# compile c
+CXXFLAGS := \
+	$(CORE_PATH)/cxxflags.txt \
+	$(VARIANT_PATH)/cxxflags.txt
+
+LDFLAGS := \
+	$(CORE_PATH)/ldflags.txt \
+	$(VARIANT_PATH)/ldflags.txt
+
+ARFLAGS := \
+	$(CORE_PATH)/arflags.txt \
+	$(VARIANT_PATH)/arflags.txt
+
+ASFLAGS := \
+	$(CORE_PATH)/asflags.txt \
+	$(VARIANT_PATH)/asflags.txt
+
+# }}}
+
+# --- SOURCEFILES --- {{{
+
+CSOURCES := \
+	$(shell find $(SRC_DIR) -type f -name '*.c') \
+	$(CORE_PATH)/csources.txt \
+	$(VARIANT_PATH)/csources.txt 
+
+CXXSOURCES := \
+	$(shell find $(SRC_DIR) -type f -name '*.cpp') \
+	$(CORE_PATH)/cxxsources.txt \
+	$(VARIANT_PATH)/cxxsources.txt
+
+ASSOURCES := \
+	$(shell find $(SRC_DIR) -type f name '*.S') \
+	$(CORE_PATH)/assources.txt \
+	$(VARIANT_PATH)/assources.txt
+
+# }}}
+
+# --- OBJECTFILES --- {{{
+
+COBJECTS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(CSOURCES))
+
+CXXOBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(CXXSOURCES))
+
+ASOBJECTS := $(patsubst %.S,$(BUILD_DIR)/%.o,$(ASSOURCES))
+
+OBJECTS := $(COBJECTS) $(CXXOBJECTS) $(ASOBJECTS)
+
+# }}}
+
+# }}}zo
+
+# --- TARGETS --- {{{
+
+# --- COMPILATION --- {{{
+
 $(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# compile c++
 $(BUILD_DIR)/%.o: %.cpp
-	@echo "Creating build directory..."
-	@mkdir -p $(dir $@)
-	@echo "Build directory created."
-	@echo "Compiling source files..."
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -c $< -o $@
-	echo "Build compiled."
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# link
-$(BIN_DIR)/$(TARGET).elf: $(OBJS)
-	@echo "Creating bin directory..."
-	@mkdir -p $(dir $@)
-	@echo "Bin directory created."
-	@echo "Linking build..."
-	$(CXX) $(OBJS) $(LDFLAGS) -o $@
-	@echo "ELF file created."
-	$(SIZE) $@
+$(BUILD_DIR)/%.o: %.S
+	$(AS) $(ASFLAGS) -c $< -o $@
 
-# create binary
-$(BIN_DIR)/%.bin: $(BIN_DIR)/$(TARGET).elf
-	@echo "Copying ELF file to binary..."
+# }}}
+
+# --- LINKING --- {{{
+
+$(BIN_DIR/$(TARGET).elf: $(OBJECTS)
+	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
+
+# }}}
+
+# --- ARCHIVAL --- {{{
+
+$(BIN_DIR)/lib$(TARGET).a: $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $(OBJECTS)
+
+# }}}
+
+# --- ELF CONVERSION --- {{{
+
+$(BIN_DIR)/$(TARGET).bin: $(BIN_DIR)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
-	@echo "Binary target successfully created."
 
-all: $(BIN_DIR)/$(TARGET).bin
+$(BIN_DIR)/$(TARGET).hex: $(BIN_DIR)/$(TARGET).elf
+	$(OBJCOPY) -O ihex $< $@
 
-# upload
+# }}}
+
+# --- UPLOAD, ALL, AND CLEAN --- {{{
+
 upload: $(BIN_DIR)/$(TARGET).bin
-	@echo "Flashing firmware..."
-	sudo $(BOSSAC) --port=$(PORT) -a >/dev/null 2>&1 || true
-	sudo $(BOSSAC) --port=$(PORT) -d -U -e -w $< -R 2>&1 || true
-	@echo "Firmware flashed."
-# clean
+	$(BOSSAC) --p=$(PORT) -U true -i -e -w -v $< -R
+
+all: $(BIN_DIR)/$(TARGET).elf
+
 clean:
-	@echo "Recursively and forcibly removing the build and bin directories..."
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
-	@echo "Removal complete."
 
-.PHONY: all clean upload
+# }}}
 
-debug:
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c src/main.cpp -o build/main.o
-	$(CXX) $(OBJS) $(LDFLAGS) -o $(BIN_DIR)/$(TARGET)
+# }}}
+
